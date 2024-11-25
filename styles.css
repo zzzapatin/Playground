@@ -3,3 +3,23 @@
     color: white;
     height: 3em;
 }
+
+.bordeNegro {
+    border: 1px solid black;
+    border-radius: 5px;
+    margin: 1em;
+}
+
+.bordeNegroHead {
+    background-color: black;
+    color: white;
+}
+
+.bordeNegroHead > * {
+    margin-left: 1em;
+}
+
+.bordeNegroBody > ol > li:hover {
+    background: black;
+    color: white;
+}
