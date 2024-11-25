@@ -13,6 +13,11 @@
             integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
             crossorigin="anonymous"
         ></script>
+        <script
+            src="https://code.jquery.com/jquery-3.7.1.min.js"
+            integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+            crossorigin="anonymous"
+        ></script>
     </head>
     <body>
         <div class="encabezado">
@@ -54,7 +59,14 @@
 
             <hr />
 
-            <div></div>
+            <div id="cargaDiv"></div>
         </div>
+        <script type="text/javascript">
+            $(".bordeNegroBody > ol > li").click(function () {
+                if (this.textContent == "Dog") {
+                    $("#cargaDiv").load("./Dog.html");
+                }
+            });
+        </script>
     </body>
 </html>
