@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Player</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #fafafa;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            color: #333;
+        }
+
+        .audio-player {
+            background: white;
+            border-radius: 12px;
+            padding: 32px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            max-width: 380px;
+            width: 100%;
+            border: 1px solid #e5e5e5;
+        }
+
+        .title {
+            font-size: 20px;
+            font-weight: 500;
+            margin-bottom: 24px;
+            text-align: center;
+            color: #333;
+        }
+
+        .file-upload {
+            margin-bottom: 24px;
+            text-align: center;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .file-button {
+            background: #333;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background 0.2s ease;
+        }
+
+        .file-button:hover {
+            background: #555;
+        }
+
+        .audio-info {
+            display: none;
+            margin-bottom: 20px;
+            padding: 12px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .filename {
+            font-weight: 500;
+            color: #333;
+            margin-bottom: 4px;
+            font-size: 14px;
+        }
+
+        .filesize {
+            font-size: 12px;
+            color: #888;
+        }
+
+        .progress-container {
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: #f0f0f0;
+            border-radius: 2px;
+            cursor: pointer;
+            margin-bottom: 8px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #333;
+            border-radius: 2px;
+            width: 0%;
+            transition: width 0.1s ease;
+        }
+
+        .time-display {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .controls {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .control-flex {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+        .control-btn {
+            background: none;
+            border: 1px solid #e0e0e0;
+            color: #666;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .control-btn:hover {
+            border-color: #333;
+            color: #333;
+        }
+
+        .play-btn {
+            width: 52px;
+            height: 52px;
+            background: #333;
+            color: white;
+            border: none;
+            font-size: 16px;
+        }
+
+        .play-btn:hover {
+            background: #555;
+            color: white;
+        }
+
+        .knob-container {
+            display: none;
+            text-align: center;
+            margin-bottom: 16px;
+        }
+
+        .knob-label {
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 12px;
+            font-weight: 500;
+        }
+
+        .rewind-knob {
+            width: 60px;
+            height: 60px;
+            background: white;
+            border: 2px solid #333;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: #333;
+            transition: all 0.2s ease;
+            margin: 0 auto 8px;
+        }
+
+        .rewind-knob:hover {
+            background: #333;
+            color: white;
+            transform: rotate(-15deg);
+        }
+
+        .rewind-knob:active {
+            transform: scale(0.95) rotate(-30deg);
+        }
+
+        .rewind-knob.dragging {
+            background: #333;
+            color: white;
+            transform: scale(1.1);
+        }
+
+        .drag-indicator {
+            position: fixed;
+            background: #333;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+            pointer-events: none;
+            z-index: 1001;
+            display: none;
+        }
+
+        .drag-line {
+            position: fixed;
+            background: #333;
+            height: 1px;
+            transform-origin: left center;
+            pointer-events: none;
+            z-index: 999;
+            display: none;
+        }
+
+        .knob-time {
+            font-size: 10px;
+            color: #aaa;
+        }
+
+        .instructions {
+            color: #888;
+            font-size: 13px;
+            line-height: 1.4;
+            text-align: center;
+        }
+
+        .instructions p {
+            margin-bottom: 6px;
+        }
+
+        .rewind-feedback {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #333;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            z-index: 1000;
+            animation: feedbackPulse 0.8s ease-out forwards;
+        }
+
+        @keyframes feedbackPulse {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+            30% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(1) translateY(-10px); }
+        }
+    </style>
+</head>
+<body>
+    <div class="audio-player">
+        <h1 class="title">Audio Player</h1>
+
+        <!-- File Upload -->
+        <div class="file-upload">
+            <input type="file" id="audioFile" class="file-input" accept="audio/*">
+            <button class="file-button" onclick="$('#audioFile').click()">
+                Choose File
+            </button>
+        </div>
+
+        <!-- Audio Info -->
+        <div class="audio-info" id="audioInfo">
+            <div class="filename" id="fileName"></div>
+            <div class="filesize" id="fileSize"></div>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-bar" id="progressBar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="time-display">
+                <span id="currentTime">0:00</span>
+                <span id="totalTime">0:00</span>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls" id="controls">
+            <div class="control-flex">
+                <button class="control-btn" id="rewindBtn" title="Rewind 5 seconds">
+                    <i class="fas fa-backward"></i>
+                </button>
+                <button class="control-btn play-btn" id="playBtn" title="Play">
+                    <i class="fas fa-play" id="playIcon"></i>
+                </button>
+                <button class="control-btn" id="stopBtn" title="Stop">
+                    <i class="fas fa-stop"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Special Rewind Knob -->
+        <div class="knob-container" id="knobContainer">
+            <div class="knob-label">Quick Rewind</div>
+            <div class="rewind-knob" id="rewindKnob" title="Click and drag to rewind">
+                <i class="fas fa-undo"></i>
+            </div>
+            <div class="knob-time">Click & drag</div>
+            <div class="drag-indicator" id="dragIndicator">-3s</div>
+            <div class="drag-line" id="dragLine"></div>
+        </div>
+
+        <!-- Instructions -->
+        <div class="instructions" id="instructions">
+            <p>Choose an audio file to start</p>
+            <p>Use controls to play and rewind</p>
+        </div>
+
+        <!-- Hidden Audio Element -->
+        <audio id="audioElement" preload="metadata"></audio>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            const audio = document.getElementById('audioElement');
+            let isPlaying = false;
+            let currentFile = null;
+
+            // Format time helper function
+            function formatTime(seconds) {
+                const mins = Math.floor(seconds / 60);
+                const secs = Math.floor(seconds % 60);
+                return `${mins}:${secs.toString().padStart(2, '0')}`;
+            }
+
+            // File upload handler
+            $('#audioFile').on('change', function(e) {
+                const file = e.target.files[0];
+                if (file && file.type.startsWith('audio/')) {
+                    currentFile = file;
+                    const url = URL.createObjectURL(file);
+                    audio.src = url;
+                    
+                    // Show file info
+                    $('#fileName').text(file.name);
+                    $('#fileSize').text(`${(file.size / (1024 * 1024)).toFixed(2)} MB`);
+                    $('#audioInfo').fadeIn();
+                    
+                    // Show controls and hide instructions
+                    $('#controls').fadeIn();
+                    $('#knobContainer').fadeIn();
+                    $('#progressContainer').fadeIn();
+                    $('#instructions').fadeOut();
+                    
+                    // Reset state
+                    isPlaying = false;
+                    $('#playIcon').removeClass('fa-pause').addClass('fa-play');
+                    
+                    // Add loading animation
+                    $('.file-button').text('Loading...');
+                    
+                    setTimeout(() => {
+                        $('.file-button').text('Choose File');
+                    }, 1000);
+                }
+            });
+
+            // Audio metadata loaded
+            audio.addEventListener('loadedmetadata', function() {
+                $('#totalTime').text(formatTime(audio.duration));
+            });
+
+            // Audio time update
+            audio.addEventListener('timeupdate', function() {
+                const currentTime = audio.currentTime;
+                const duration = audio.duration;
+                
+                $('#currentTime').text(formatTime(currentTime));
+                
+                if (duration) {
+                    const progress = (currentTime / duration) * 100;
+                    $('#progressFill').css('width', progress + '%');
+                }
+            });
+
+            // Audio ended
+            audio.addEventListener('ended', function() {
+                isPlaying = false;
+                $('#playIcon').removeClass('fa-pause').addClass('fa-play');
+            });
+
+            // Play/Pause button
+            $('#playBtn').on('click', function() {
+                if (isPlaying) {
+                    audio.pause();
+                    isPlaying = false;
+                    $('#playIcon').removeClass('fa-pause').addClass('fa-play');
+                } else {
+                    audio.play();
+                    isPlaying = true;
+                    $('#playIcon').removeClass('fa-play').addClass('fa-pause');
+                }
+            });
+
+            // Stop button
+            $('#stopBtn').on('click', function() {
+                audio.pause();
+                audio.currentTime = 0;
+                isPlaying = false;
+                $('#playIcon').removeClass('fa-pause').addClass('fa-play');
+            });
+
+            // Rewind button (5 seconds)
+            $('#rewindBtn').on('click', function() {
+                const newTime = Math.max(0, audio.currentTime - 5);
+                audio.currentTime = newTime;
+            });
+
+            // Special rewind knob with drag functionality
+            let isDragging = false;
+            let dragStartX, dragStartY;
+            let knobRect;
+            let wasPlaying = false;
+
+            $('#rewindKnob').on('mousedown', function(e) {
+                e.preventDefault();
+                isDragging = true;
+                wasPlaying = isPlaying;
+                
+                // Pause audio while dragging
+                if (isPlaying) {
+                    audio.pause();
+                }
+                
+                const knob = $(this);
+                knobRect = this.getBoundingClientRect();
+                dragStartX = e.clientX;
+                dragStartY = e.clientY;
+                
+                knob.addClass('dragging');
+                $('#dragIndicator').show().text('-1s');
+                $('#dragLine').show();
+                
+                $(document).on('mousemove.knobDrag', function(e) {
+                    if (!isDragging) return;
+                    
+                    const rewindSeconds = _rewindSeconds(e.clientX, e.clientY, dragStartX, dragStartY);
+                    const distance = rewindSeconds * 20;
+
+                    $('#dragIndicator').text(`-${rewindSeconds}s`).css({
+                        left: e.clientX + 10,
+                        top: e.clientY - 10
+                    });
+                    
+                    const knobCenterX = knobRect.left + knobRect.width/2;
+                    const knobCenterY = knobRect.top + knobRect.height/2;
+                    
+                    $('#dragLine').css({
+                        left: knobCenterX,
+                        top: knobCenterY,
+                        width: distance,
+                        transform: `rotate(180deg)`
+                    });
+                    
+                    const rotation = Math.min(360, distance * 2);
+                    knob.css('transform', `scale(1.1) rotate(-${rotation}deg)`);
+                });
+                
+                $(document).on('mouseup.knobDrag', function(e) {
+                    if (!isDragging) return;
+                
+                    const rewindSeconds = _rewindSeconds(e.clientX, e.clientY, dragStartX, dragStartY);
+                    const newTime = Math.max(0, audio.currentTime - rewindSeconds);
+                    audio.currentTime = newTime;
+                    
+                    if (wasPlaying) {
+                        audio.play();
+                    }
+                    
+                    $('<div class="rewind-feedback"></div>').text(`-${rewindSeconds}s`).appendTo('body');
+                    setTimeout(() => $('.rewind-feedback').remove(), 800);
+                    
+                    isDragging = false;
+                    $('#rewindKnob').removeClass('dragging').css('transform', '');
+                    $('#dragIndicator').hide();
+                    $('#dragLine').hide();
+                    $(document).off('.knobDrag');
+                });
+            });
+
+            function _rewindSeconds(_clientX, _clientY, _dragStartX, _dragStartY) {
+                let distanceX = Math.abs(_clientX - _dragStartX);
+                return Math.max(1, Math.floor(1 + (distanceX / 40)));
+            }
+
+            $('#rewindKnob').on('contextmenu', function(e) {
+                e.preventDefault();
+            });
+
+            $('#progressBar').on('click', function(e) {
+                if (!audio.duration) return;
+                
+                const rect = this.getBoundingClientRect();
+                const clickX = e.clientX - rect.left;
+                const newTime = (clickX / rect.width) * audio.duration;
+                
+                audio.currentTime = newTime;
+            });
+        });
+    </script>
+</body>
+</html>
