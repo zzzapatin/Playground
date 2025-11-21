@@ -414,7 +414,7 @@
 
                     let timestamp = document.getElementById("currentTime").textContent;
                     navigator.clipboard.writeText(timestamp)
-                        .then(() => alert("Copied!"))
+                        .then(() => console.log("Copied! : ", timestamp))
                         .catch(err => console.error(err));
                 } else {
                     audio.play();
