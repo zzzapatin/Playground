@@ -411,6 +411,11 @@
                     audio.pause();
                     isPlaying = false;
                     $('#playIcon').removeClass('fa-pause').addClass('fa-play');
+
+                    let timestamp = document.getElementById("totalTime").value;
+                    navigator.clipboard.writeText(timestamp)
+                        .then(() => alert("Copied!"))
+                        .catch(err => console.error(err));
                 } else {
                     audio.play();
                     isPlaying = true;
