@@ -412,7 +412,7 @@
                     isPlaying = false;
                     $('#playIcon').removeClass('fa-pause').addClass('fa-play');
 
-                    let timestamp = document.getElementById("totalTime").value;
+                    let timestamp = document.getElementById("currentTime").textContent;
                     navigator.clipboard.writeText(timestamp)
                         .then(() => alert("Copied!"))
                         .catch(err => console.error(err));
