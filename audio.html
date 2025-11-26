@@ -23,6 +23,7 @@
             justify-content: center;
             padding: 20px;
             color: #333;
+            transition: background 0.3s, color 0.3s;
         }
 
         .audio-player {
@@ -33,16 +34,130 @@
             max-width: 380px;
             width: 100%;
             border: 1px solid #e5e5e5;
+            transition: background 0.3s, color 0.3s, border 0.3s;
+        }
+
+        .title-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
         }
 
         .title {
             font-size: 20px;
             font-weight: 500;
-            margin-bottom: 24px;
-            text-align: center;
             color: #333;
+            text-align: center;
+            flex: 1;
         }
 
+        .darkmode-toggle {
+            background: none;
+            color: #333;
+            border: 1px solid #e5e5e5;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 18px;
+            transition: background 0.2s, color 0.2s, border 0.2s;
+            padding: 7px 12px;
+            margin-left: 12px;
+        }
+
+        .darkmode-toggle:hover {
+            background: #eee;
+        }
+
+        /* ---- DARK MODE ---- */
+        body.dark-mode {
+            background: #181820;
+            color: #ebebeb;
+        }
+
+        body.dark-mode .audio-player {
+            background: #23232b;
+            color: #ebebeb;
+            border: 1px solid #31313b;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.35);
+        }
+
+        body.dark-mode .title, 
+        body.dark-mode .filename,
+        body.dark-mode .knob-label {
+            color: #ebebeb;
+        }
+
+        body.dark-mode .file-button {
+            background: #23232b;
+            color: #ebebeb;
+        }
+        body.dark-mode .file-button:hover {
+            background: #44445a;
+        }
+
+        body.dark-mode .audio-info {
+            border-bottom: 1px solid #31313b;
+        }
+
+        body.dark-mode .progress-bar {
+            background: #29293c;
+        }
+        body.dark-mode .progress-fill {
+            background: #ebebeb;
+        }
+        body.dark-mode .time-display {
+            color: #b0b0d6;
+        }
+        body.dark-mode .control-btn {
+            border: 1px solid #31313b;
+            color: #cccfdb;
+            background: none;
+        }
+        body.dark-mode .control-btn:hover {
+            border-color: #ebebeb;
+            color: #ebebeb;
+        }
+        body.dark-mode .play-btn {
+            background: #44445a;
+            color: #ebebeb;
+        }
+        body.dark-mode .play-btn:hover {
+            background: #69698c;
+            color: #fff;
+        }
+        body.dark-mode .rewind-knob {
+            background: #23232b;
+            color: #ebebeb;
+            border: 2px solid #ebebeb;
+        }
+        body.dark-mode .rewind-knob:hover, body.dark-mode .rewind-knob.dragging {
+            background: #ebebeb;
+            color: #23232b;
+        }
+        body.dark-mode .knob-time {
+            color: #b9b9db;
+        }
+        body.dark-mode .drag-indicator, body.dark-mode .rewind-feedback {
+            background: #ebebeb;
+            color: #23232b;
+        }
+        body.dark-mode .drag-line {
+            background: #ebebeb;
+        }
+        body.dark-mode .instructions {
+            color: #b0b0d6;
+        }
+        body.dark-mode .darkmode-toggle {
+            background: none;
+            color: #ebebeb;
+            border: 1px solid #31313b;
+        }
+        body.dark-mode .darkmode-toggle:hover {
+            background: #353545;
+            color: #fff;
+        }
+
+        /* ----- Rest: original styles ----- */
         .file-upload {
             margin-bottom: 24px;
             text-align: center;
@@ -273,8 +388,13 @@
 </head>
 <body>
     <div class="audio-player">
-        <h1 class="title">Audio Player</h1>
-
+        <!-- Darkmode toggle in row with title -->
+        <div class="title-row">
+            <h1 class="title">Audio Player</h1>
+            <button class="darkmode-toggle" id="darkmodeToggle" title="Toggle Dark Mode">
+                <i class="fa-solid fa-moon" id="darkmodeIcon"></i>
+            </button>
+        </div>
         <!-- File Upload -->
         <div class="file-upload">
             <input type="file" id="audioFile" class="file-input" accept="audio/*">
@@ -338,6 +458,29 @@
 
     <script>
         $(document).ready(function() {
+            // Darkmode functionality
+            function updateDarkModeToggleIcon() {
+                if ($('body').hasClass('dark-mode')) {
+                    $('#darkmodeIcon').removeClass('fa-moon').addClass('fa-sun');
+                    $('#darkmodeToggle').attr('title', 'Switch to Light Mode');
+                } else {
+                    $('#darkmodeIcon').removeClass('fa-sun').addClass('fa-moon');
+                    $('#darkmodeToggle').attr('title', 'Switch to Dark Mode');
+                }
+            }
+            // Initial state from localStorage
+            if (localStorage.getItem('audio_darkmode') === '1') {
+                $('body').addClass('dark-mode');
+            }
+            updateDarkModeToggleIcon();
+
+            $('#darkmodeToggle').on('click', function() {
+                $('body').toggleClass('dark-mode');
+                // Persist preference
+                localStorage.setItem('audio_darkmode', $('body').hasClass('dark-mode') ? '1' : '0');
+                updateDarkModeToggleIcon();
+            });
+
             const audio = document.getElementById('audioElement');
             let isPlaying = false;
             let currentFile = null;
