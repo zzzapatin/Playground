@@ -492,6 +492,15 @@
                 return `${mins}:${secs.toString().padStart(2, '0')}`;
             }
 
+            // New: format as HH:mm:ss for clipboard
+            function formatTimeHMS(seconds) {
+                const total = Math.floor(seconds || 0);
+                const hours = Math.floor(total / 3600);
+                const minutes = Math.floor((total % 3600) / 60);
+                const secs = total % 60;
+                return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            }
+
             // File upload handler
             $('#audioFile').on('change', function(e) {
                 const file = e.target.files[0];
@@ -555,7 +564,8 @@
                     isPlaying = false;
                     $('#playIcon').removeClass('fa-pause').addClass('fa-play');
 
-                    let timestamp = document.getElementById("currentTime").textContent;
+                    // Copy current time to clipboard in HH:mm:ss format
+                    const timestamp = formatTimeHMS(audio.currentTime);
                     navigator.clipboard.writeText(timestamp)
                         .then(() => console.log("Copied! : ", timestamp))
                         .catch(err => console.error(err));
