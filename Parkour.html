@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>3D Platform Game</title>
   <style>
     body { 
@@ -33,12 +33,12 @@
   <div id="info">
     <strong>Controls:</strong><br>
     WASD - Move<br>
-    Space - Jump
+    Space - Jump<br>
+    Tab - Toggle First-Person (pointer lock & mouse look)<br>
+    Esc - Release pointer lock / exit FPS
   </div>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js">
-
-  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   
   <script>
     let scene
@@ -55,6 +55,12 @@
     const JUMP_FORCE = 15;
     const MOVE_SPEED = 20;
     const PLAYER_HALF_HEIGHT = 1; // player box height is 2, so half is 1
+
+    // FPS / pointer-lock related
+    let isFPS = false;
+    let yaw = 0;   // rotation around Y
+    let pitch = 0; // rotation around X
+    const MOUSE_SENSITIVITY = 0.0025;
 
     function init() {
       // Scene
@@ -122,9 +128,63 @@
       createPlatform(3, 12, 6, 6, 8.0);
 
       // Event listeners
-      document.addEventListener('keydown', (e) => keys[e.key.toLowerCase()] = true);
+      document.addEventListener('keydown', onKeyDown);
       document.addEventListener('keyup', (e) => keys[e.key.toLowerCase()] = false);
       window.addEventListener('resize', onWindowResize);
+
+      // Pointer lock change / error
+      document.addEventListener('pointerlockchange', onPointerLockChange);
+      document.addEventListener('pointerlockerror', () => {
+        console.warn('Pointer lock error');
+      });
+
+      // Mouse look (activated only while pointer locked)
+      document.addEventListener('mousemove', onMouseMove);
+    }
+
+    function onKeyDown(e) {
+      // Toggle FPS with Tab
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        // If not currently pointer locked, request it to enter FPS
+        if (document.pointerLockElement !== renderer.domElement) {
+          renderer.domElement.requestPointerLock();
+          // isFPS will be set when pointerlockchange fires
+        } else {
+          // If pointer is locked, exit pointer lock to return to 3rd-person
+          document.exitPointerLock();
+        }
+        return;
+      }
+
+      // Normal movement keys
+      keys[e.key.toLowerCase()] = true;
+    }
+
+    function onPointerLockChange() {
+      const locked = document.pointerLockElement === renderer.domElement;
+      isFPS = locked;
+      if (!isFPS) {
+        // Reset pitch/yaw? Keep them, but you might want to reset if desired
+      } else {
+        // When entering FPS, derive current yaw from camera orientation so it's smooth
+        const euler = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ');
+        yaw = euler.y;
+        pitch = euler.x;
+        // Hide cursor handled by pointer lock automatically
+      }
+    }
+
+    function onMouseMove(e) {
+      if (!isFPS) return;
+      // movementX/Y are available when pointer is locked
+      const movementX = e.movementX || 0;
+      const movementY = e.movementY || 0;
+      yaw -= movementX * MOUSE_SENSITIVITY;
+      pitch -= movementY * MOUSE_SENSITIVITY;
+      // Clamp pitch so you can't flip upside down
+      const PI_2 = Math.PI / 2 - 0.05;
+      pitch = Math.max(-PI_2, Math.min(PI_2, pitch));
     }
 
     function onWindowResize() {
@@ -166,21 +226,42 @@
       // Apply gravity
       velocity.y += GRAVITY * delta;
 
-      // Movement directions (fixed, not camera-relative)
+      // Movement directions
       direction.set(0, 0, 0);
-      
+
       if (keys['w']) direction.z -= 1;
       if (keys['s']) direction.z += 1;
       if (keys['a']) direction.x -= 1;
       if (keys['d']) direction.x += 1;
 
-      if (direction.length() > 0) {
-        direction.normalize();
-        velocity.x = direction.x * MOVE_SPEED;
-        velocity.z = direction.z * MOVE_SPEED;
+      if (isFPS) {
+        // Camera-relative movement (use yaw to compute forward/right)
+        if (direction.length() > 0) {
+          const moveX = direction.x;
+          const moveZ = direction.z;
+          // forward vector (camera facing direction). For yaw=0 we want forward = (0,0,-1)
+          const forward = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));
+          const right = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
+          const moveDir = new THREE.Vector3();
+          moveDir.addScaledVector(forward, moveZ);
+          moveDir.addScaledVector(right, moveX);
+          if (moveDir.length() > 0) moveDir.normalize();
+          velocity.x = moveDir.x * MOVE_SPEED;
+          velocity.z = moveDir.z * MOVE_SPEED;
+        } else {
+          velocity.x *= 0.9;
+          velocity.z *= 0.9;
+        }
       } else {
-        velocity.x *= 0.9;
-        velocity.z *= 0.9;
+        // World-axis movement (original behaviour)
+        if (direction.length() > 0) {
+          direction.normalize();
+          velocity.x = direction.x * MOVE_SPEED;
+          velocity.z = direction.z * MOVE_SPEED;
+        } else {
+          velocity.x *= 0.9;
+          velocity.z *= 0.9;
+        }
       }
 
       // Jump
@@ -207,6 +288,27 @@
       // Keep player in bounds
       player.position.x = Math.max(-24, Math.min(24, player.position.x));
       player.position.z = Math.max(-24, Math.min(24, player.position.z));
+
+      // Rotate player mesh to face yaw (so third-person view also shows orientation)
+      player.rotation.y = yaw;
+    }
+
+    function updateCamera() {
+      if (isFPS) {
+        // Place camera at player's head and apply yaw/pitch
+        const headHeight = PLAYER_HALF_HEIGHT * 0.9 + 0.1; // around player's eye level
+        camera.position.set(player.position.x, player.position.y + headHeight, player.position.z);
+        // Set camera quaternion from yaw/pitch (order Y then X)
+        const quat = new THREE.Quaternion();
+        quat.setFromEuler(new THREE.Euler(pitch, yaw, 0, 'YXZ'));
+        camera.quaternion.copy(quat);
+      } else {
+        // third-person: simple chase camera behind and above player
+        const behind = new THREE.Vector3(0, 8, 16);
+        // You can adjust the offsets to taste:
+        camera.position.lerp(new THREE.Vector3(player.position.x + behind.x, player.position.y + behind.y, player.position.z + behind.z), 0.1);
+        camera.lookAt(player.position.x, player.position.y + 1, player.position.z);
+      }
     }
 
     function animate() {
@@ -214,6 +316,7 @@
       
       const delta = 0.016; // Approximately 60fps
       updatePlayer(delta);
+      updateCamera();
       
       renderer.render(scene, camera);
     }
