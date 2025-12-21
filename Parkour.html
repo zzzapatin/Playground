@@ -46,6 +46,7 @@
     let renderer
     let player
     let ground
+    let platforms = [];
     let keys = {};
     let velocity = new THREE.Vector3();
     let direction = new THREE.Vector3();
@@ -53,6 +54,7 @@
     const GRAVITY = -30;
     const JUMP_FORCE = 15;
     const MOVE_SPEED = 20;
+    const PLAYER_HALF_HEIGHT = 1; // player box height is 2, so half is 1
 
     function init() {
       // Scene
@@ -100,6 +102,25 @@
       player.position.set(0, 3, 0);
       scene.add(player);
 
+      // Create platforms
+      const platformMaterial = new THREE.MeshStandardMaterial({ color: 0x8B5A2B });
+      function createPlatform(x, z, width, depth, centerY) {
+        const geo = new THREE.BoxGeometry(width, 1, depth); // fixed thickness = 1
+        const mesh = new THREE.Mesh(geo, platformMaterial);
+        mesh.receiveShadow = true;
+        mesh.position.set(x, centerY, z);
+        scene.add(mesh);
+        platforms.push(mesh);
+      }
+
+      // Several example platforms (x, z, width, depth, centerY)
+      createPlatform(0, -8, 6, 6, 2.5);
+      createPlatform(7, -2, 4, 4, 4.0);
+      createPlatform(-7, 3, 3, 6, 6.0);
+      createPlatform(10, 8, 8, 3, 3.5);
+      createPlatform(-12, -6, 5, 5, 5.5);
+      createPlatform(3, 12, 6, 6, 8.0);
+
       // Event listeners
       document.addEventListener('keydown', (e) => keys[e.key.toLowerCase()] = true);
       document.addEventListener('keyup', (e) => keys[e.key.toLowerCase()] = false);
@@ -110,6 +131,35 @@
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    function checkPlatformCollisions() {
+      // simple AABB collision checks for landing on top of platforms while falling
+      const EPS = 0.05;
+      const playerBottom = player.position.y - PLAYER_HALF_HEIGHT;
+
+      for (let p of platforms) {
+        // geometry.parameters exists for BoxGeometry created directly
+        const halfW = (p.geometry.parameters.width) / 2;
+        const halfD = (p.geometry.parameters.depth) / 2;
+        const topY = p.position.y + (p.geometry.parameters.height) / 2; // height = 1 => top = center + 0.5
+
+        // check XZ overlap
+        const withinX = player.position.x > (p.position.x - halfW) && player.position.x < (p.position.x + halfW);
+        const withinZ = player.position.z > (p.position.z - halfD) && player.position.z < (p.position.z + halfD);
+
+        // Only consider landing if player is over platform horizontally and falling (or stationary vertically)
+        if (withinX && withinZ && velocity.y <= 0) {
+          // If player's bottom is at or just below the platform top (within EPS)
+          if (playerBottom <= topY + EPS && (playerBottom >= topY - 2)) {
+            // Snap to platform top
+            player.position.y = topY + PLAYER_HALF_HEIGHT;
+            velocity.y = 0;
+            canJump = true;
+            return; // landed on a platform; no need to check others this frame
+          }
+        }
+      }
     }
 
     function updatePlayer(delta) {
@@ -134,7 +184,7 @@
       }
 
       // Jump
-      if (keys[' '] && canJump) {
+      if ((keys[' '] || keys['space']) && canJump) {
         velocity.y = JUMP_FORCE;
         canJump = false;
       }
@@ -143,6 +193,9 @@
       player.position.x += velocity.x * delta;
       player.position.z += velocity.z * delta;
       player.position.y += velocity.y * delta;
+
+      // Platform collision check (should happen before ground collision)
+      checkPlatformCollisions();
 
       // Ground collision
       if (player.position.y <= 1) {
