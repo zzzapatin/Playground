@@ -303,11 +303,19 @@
         quat.setFromEuler(new THREE.Euler(pitch, yaw, 0, 'YXZ'));
         camera.quaternion.copy(quat);
       } else {
-        // third-person: simple chase camera behind and above player
-        const behind = new THREE.Vector3(0, 8, 16);
-        // You can adjust the offsets to taste:
-        camera.position.lerp(new THREE.Vector3(player.position.x + behind.x, player.position.y + behind.y, player.position.z + behind.z), 0.1);
-        camera.lookAt(player.position.x, player.position.y + 1, player.position.z);
+        // third-person: camera follows behind the player smoothly and orients to look at the player
+        // Desired offset in local player space: up and back
+        const localOffset = new THREE.Vector3(0, 6, 12); // y up, z back
+        // Rotate offset by player's yaw so camera stays behind relative to player's facing direction
+        const quat = new THREE.Quaternion();
+        quat.setFromEuler(new THREE.Euler(0, player.rotation.y, 0));
+        const worldOffset = localOffset.clone().applyQuaternion(quat);
+        const desiredPos = new THREE.Vector3().copy(player.position).add(worldOffset);
+        // Smoothly interpolate camera position
+        camera.position.lerp(desiredPos, 0.08);
+        // Look slightly above player's position (eyes)
+        const lookAtPos = new THREE.Vector3(player.position.x, player.position.y + 1.2, player.position.z);
+        camera.lookAt(lookAtPos);
       }
     }
 
