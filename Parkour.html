@@ -131,32 +131,9 @@
       document.addEventListener('keydown', onKeyDown);
       document.addEventListener('keyup', (e) => keys[e.key.toLowerCase()] = false);
       window.addEventListener('resize', onWindowResize);
-
-      // Pointer lock change / error
-      document.addEventListener('pointerlockchange', onPointerLockChange);
-      document.addEventListener('pointerlockerror', () => {
-        console.warn('Pointer lock error');
-      });
-
-      // Mouse look (activated only while pointer locked)
-      document.addEventListener('mousemove', onMouseMove);
     }
 
     function onKeyDown(e) {
-      // Toggle FPS with Tab
-      if (e.key === 'Tab') {
-        e.preventDefault();
-        // If not currently pointer locked, request it to enter FPS
-        if (document.pointerLockElement !== renderer.domElement) {
-          renderer.domElement.requestPointerLock();
-          // isFPS will be set when pointerlockchange fires
-        } else {
-          // If pointer is locked, exit pointer lock to return to 3rd-person
-          document.exitPointerLock();
-        }
-        return;
-      }
-
       // Normal movement keys
       keys[e.key.toLowerCase()] = true;
     }
@@ -173,18 +150,6 @@
         pitch = euler.x;
         // Hide cursor handled by pointer lock automatically
       }
-    }
-
-    function onMouseMove(e) {
-      if (!isFPS) return;
-      // movementX/Y are available when pointer is locked
-      const movementX = e.movementX || 0;
-      const movementY = e.movementY || 0;
-      yaw -= movementX * MOUSE_SENSITIVITY;
-      pitch -= movementY * MOUSE_SENSITIVITY;
-      // Clamp pitch so you can't flip upside down
-      const PI_2 = Math.PI / 2 - 0.05;
-      pitch = Math.max(-PI_2, Math.min(PI_2, pitch));
     }
 
     function onWindowResize() {
@@ -234,36 +199,16 @@
       if (keys['a']) direction.x -= 1;
       if (keys['d']) direction.x += 1;
 
-      if (isFPS) {
-        // Camera-relative movement (use yaw to compute forward/right)
-        if (direction.length() > 0) {
-          const moveX = direction.x;
-          const moveZ = direction.z;
-          // forward vector (camera facing direction). For yaw=0 we want forward = (0,0,-1)
-          const forward = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));
-          const right = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
-          const moveDir = new THREE.Vector3();
-          moveDir.addScaledVector(forward, moveZ);
-          moveDir.addScaledVector(right, moveX);
-          if (moveDir.length() > 0) moveDir.normalize();
-          velocity.x = moveDir.x * MOVE_SPEED;
-          velocity.z = moveDir.z * MOVE_SPEED;
-        } else {
-          velocity.x *= 0.9;
-          velocity.z *= 0.9;
-        }
+      // World-axis movement (original behaviour)
+      if (direction.length() > 0) {
+        direction.normalize();
+        velocity.x = direction.x * MOVE_SPEED;
+        velocity.z = direction.z * MOVE_SPEED;
       } else {
-        // World-axis movement (original behaviour)
-        if (direction.length() > 0) {
-          direction.normalize();
-          velocity.x = direction.x * MOVE_SPEED;
-          velocity.z = direction.z * MOVE_SPEED;
-        } else {
-          velocity.x *= 0.9;
-          velocity.z *= 0.9;
-        }
+        velocity.x *= 0.9;
+        velocity.z *= 0.9;
       }
-
+    
       // Jump
       if ((keys[' '] || keys['space']) && canJump) {
         velocity.y = JUMP_FORCE;
