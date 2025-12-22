@@ -234,35 +234,7 @@
       if (keys['a']) direction.x -= 1;
       if (keys['d']) direction.x += 1;
 
-      if (isFPS) {
-        // Camera-relative movement (use yaw to compute forward/right)
-        if (direction.length() > 0) {
-          const moveX = direction.x;
-          const moveZ = direction.z;
-          // forward vector (camera facing direction). For yaw=0 we want forward = (0,0,-1)
-          const forward = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));
-          const right = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
-          const moveDir = new THREE.Vector3();
-          moveDir.addScaledVector(forward, moveZ);
-          moveDir.addScaledVector(right, moveX);
-          if (moveDir.length() > 0) moveDir.normalize();
-          velocity.x = moveDir.x * MOVE_SPEED;
-          velocity.z = moveDir.z * MOVE_SPEED;
-        } else {
-          velocity.x *= 0.9;
-          velocity.z *= 0.9;
-        }
-      } else {
-        // World-axis movement (original behaviour)
-        if (direction.length() > 0) {
-          direction.normalize();
-          velocity.x = direction.x * MOVE_SPEED;
-          velocity.z = direction.z * MOVE_SPEED;
-        } else {
-          velocity.x *= 0.9;
-          velocity.z *= 0.9;
-        }
-      }
+
 
       // Jump
       if ((keys[' '] || keys['space']) && canJump) {
@@ -270,6 +242,12 @@
         canJump = false;
       }
 
+      if (direction.length() > 0) {
+          direction.normalize();
+          velocity.x = direction.x * MOVE_SPEED;
+          velocity.z = direction.z * MOVE_SPEED;
+      }
+      
       // Update position
       player.position.x += velocity.x * delta;
       player.position.z += velocity.z * delta;
