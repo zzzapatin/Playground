@@ -57,8 +57,15 @@
     const PLAYER_HALF_HEIGHT = 1; // player box height is 2, so half is 1
 
     let yaw = 0;   // rotation around Y
+
     let pitch = 0; // rotation around X
+    const turnSpeed = 1.78; // radians per second
+
     const MOUSE_SENSITIVITY = 0.0025;
+
+    const Y_AXIS = new THREE.Vector3(0, 1, 0);
+    const yawQuat = new THREE.Quaternion();
+    const forward = new THREE.Vector3();
 
     function init() {
       // Scene
@@ -92,7 +99,7 @@
 
       // Ground
       const groundGeo = new THREE.BoxGeometry(50, 1, 50);
-      const groundMat = new THREE.MeshStandardMaterial({ color: 0x2d5016 });
+      const groundMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
       ground = new THREE.Mesh(groundGeo, groundMat);
       ground.receiveShadow = true;
       ground.position.y = -0.5;
@@ -124,6 +131,15 @@
       createPlatform(10, 8, 8, 3, 3.5);
       createPlatform(-12, -6, 5, 5, 5.5);
       createPlatform(3, 12, 6, 6, 8.0);
+
+      const wallGeo  = new THREE.BoxGeometry(2,100,50);
+      const wallMat  = new THREE.MeshStandardMaterial({color: 0x99004F});
+      const wallMesh = new THREE.Mesh(wallGeo, wallMat);
+      wallMesh.position.set(-26, 0, -26);
+      wallMesh.receiveShadow = true;
+      scene.add(wallMesh);
+
+
 
       // Event listeners
       document.addEventListener('keydown', onKeyDown);
@@ -173,92 +189,54 @@
     }
 
     function updatePlayer(delta) {
-
-      // --- Gravity ---
+      // Gravity
       velocity.y += GRAVITY * delta;
 
-      // --- Movement input ---
-      direction.set(0, 0, 0);
+      // Rotation
+      if (keys.a) yaw += turnSpeed * delta;
+      if (keys.d) yaw -= turnSpeed * delta;
 
-      if (keys['w']) direction.z -= 1;
-      if (keys['s']) direction.z += 1;
-      // if (keys['a']) direction.x -= 1;
-      // if (keys['d']) direction.x += 1;
+      yawQuat.setFromAxisAngle(Y_AXIS, yaw);
+      player.quaternion.copy(yawQuat);
 
-      if (direction.length() > 0) {
-        direction.normalize();
+      // Movement input
+      let move = 0;
+      if (keys.w) move += 1;
+      if (keys.s) move -= 1;
 
-        // --- Player-relative directions ---
-        const forward = new THREE.Vector3(0, 0, 1)
-          .applyQuaternion(player.quaternion);
-
-        const right = new THREE.Vector3(1, 0, 0)
-          .applyQuaternion(player.quaternion);
-
-        // Combine movement
-        velocity.x =
-          (forward.x * direction.z + right.x * direction.x) * MOVE_SPEED;
-
-        velocity.z =
-          (forward.z * direction.z + right.z * direction.x) * MOVE_SPEED;
-
+      if (move !== 0) {
+        forward.set(0, 0, -1).applyQuaternion(player.quaternion);
+        velocity.x = forward.x * MOVE_SPEED * move;
+        velocity.z = forward.z * MOVE_SPEED * move;
       } else {
         velocity.x *= 0.9;
         velocity.z *= 0.9;
       }
 
-      // --- Jump ---
+      // Jump
       if ((keys[' '] || keys['space']) && canJump) {
         velocity.y = JUMP_FORCE;
         canJump = false;
       }
 
-      // --- Update position ---
-      player.position.x += velocity.x * delta;
-      player.position.z += velocity.z * delta;
-      player.position.y += velocity.y * delta;
+      // Apply movement
+      player.position.addScaledVector(velocity, delta);
 
-      // --- Platform collision ---
       checkPlatformCollisions();
 
-      // --- Ground collision ---
+      // Ground
       if (player.position.y <= 1) {
         player.position.y = 1;
         velocity.y = 0;
         canJump = true;
       }
-
-      // --- Bounds ---
-      player.position.x = Math.max(-24, Math.min(24, player.position.x));
-      player.position.z = Math.max(-24, Math.min(24, player.position.z));
     }
+
 
 
     function updateCamera(deltaTime) {
 
-        // --- 1. Update yaw from input ---
-        const turnSpeed = 1.78; // radians per second
-        if (keys.a) {
-           yaw += (turnSpeed * deltaTime);
-        }
-
-        if (keys.d) {
-          yaw -= (turnSpeed * deltaTime);
-        }
-
-        // --- 2. Create a yaw quaternion (rotate around Y axis) ---
-        const yawQuat = new THREE.Quaternion();
-        yawQuat.setFromAxisAngle(
-            new THREE.Vector3(0, 1, 0),
-            yaw
-        );
-
-        console.log("yaw: ", yaw)
-
-        // --- 3. Apply yaw to the player ---
-        player.quaternion.copy(yawQuat);
-
-
+        yawQuat.setFromAxisAngle(Y_AXIS, yaw);
         // --- 4. Rotate camera offset around the player ---
         const cameraOffset = new THREE.Vector3(0, 6, 12); // up + back
         const rotatedOffset = cameraOffset.clone().applyQuaternion(yawQuat);
@@ -267,7 +245,6 @@
 
         // Smooth camera movement
         camera.position.lerp(desiredCameraPos, 0.08);
-        console.log("camera pos: ", camera.position)
 
         // --- 5. Look at the player (slightly above center) ---
         camera.lookAt(
