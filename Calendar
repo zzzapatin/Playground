@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Calendario</title>
+
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+    }
+
+    .borde {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .borde th,
+    .borde td {
+      border: 1px solid black;
+      padding: 1em;
+    }
+
+    thead {
+      height: 1rem;
+    }
+  </style>
+</head>
+
+<body>
+  <table class="borde">
+    <thead>
+      <tr>
+        <th>Lunes</th>
+        <th>Martes</th>
+        <th>Miércoles</th>
+        <th>Jueves</th>
+        <th>Viernes</th>
+        <th>Sábado</th>
+        <th>Domingo</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      <tr>
+        <td>1</td>
+        <td>2</td>
+        <td>3</td>
+        <td>4</td>
+        <td>5</td>
+        <td>6</td>
+        <td>7</td>
+      </tr>
+    </tbody>
+  </table>
+</body>
+</html>
